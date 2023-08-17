@@ -1,0 +1,7 @@
+from enum import Enum
+
+# class syntax
+class BallState(Enum):
+    CHILLING = 0
+    DANGEROUS = 1
+    GOAL = 2

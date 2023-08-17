@@ -5,15 +5,20 @@ import cv2
 import numpy as np
 import math
 import cvzone
-
 from utils.utils import display_ball_velocity, draw_ball_direction, goal
-
 BABY_FOOT_WIDTH_IN_CM = 115
 BABY_FOOT_HEIGHT_IN_CM = 68
 CAMERA_FRAME_RATE = 60
 DEFENSIVE_ZONE_WIDTH = 400
 GOAL_DETECTION_PROPORTION_OF_THE_WALL_IN_PERCENTAGE = 57
 
+from enum import Enum
+
+# class syntax
+class BallState(Enum):
+    CHILLING = 0
+    DANGEROUS = 1
+    GOAL = 2
 
 class ShotDetector:
     def __init__(self, video_url):
@@ -23,14 +28,18 @@ class ShotDetector:
         self.last_ball_state = [] #check if goal or not
         self.ball_detected_in_frame = False
 
+        self.last_seen_ball_x = 0
+        self.last_seen_ball_y = 0
+
+        self.direction = None
         # Use video - replace text with your video path
         #self.cap = cv2.VideoCapture("ressources/baby.mp4")
         self.cap = cv2.VideoCapture(video_url)
         
-        total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         # Calculate the duration in seconds
-        self.Duration = int(total_frames / CAMERA_FRAME_RATE / 60)
+        self.Duration = int(self.total_frames / 30)
         self.frame_count = 0
         self.frame_count_ball_undetected = 0
         self.frame = None
@@ -105,9 +114,15 @@ class ShotDetector:
                         if new_center!=None:
                             previous_center=new_center
                         new_center = (int(x1 + w / 2), int(y1 + h / 2))
+                        self.last_seen_ball_x = new_center[0]
+                        self.last_seen_ball_y = new_center[1]
                         if new_center[0] < self.table_border_left_x-100: 
+                            if self.direction != None:
+                                self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
                             goal(self.frame)
                         elif new_center[0] > self.table_border_right_x+100:
+                            if self.direction != None:
+                                self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
                             goal(self.frame)
                         
                             
@@ -122,11 +137,14 @@ class ShotDetector:
                             self.BabyDelimitation.append([x1, y1])
                             self.BabyDelimitation.append([x2, y2])
                         if previous_center!=None:
-                            direction, dangerous = draw_ball_direction(self.frame, previous_center,new_center, x1, x2, y1, y2, h, GOAL_DETECTION_PROPORTION_OF_THE_WALL_IN_PERCENTAGE, self.ball_velocity)
+                            self.direction, dangerous = draw_ball_direction(self.frame, previous_center,new_center, x1, x2, y1, y2, h, GOAL_DETECTION_PROPORTION_OF_THE_WALL_IN_PERCENTAGE, self.ball_velocity)
+                            state = BallState.CHILLING
                             if dangerous:
-                                self.last_ball_state.append(direction)
+                                state = BallState.DANGEROUS
+                                self.last_ball_state.append(self.direction)
                             else:
                                 self.last_ball_state=[]
+                            self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity, self.direction.value, state.value, ])
                 
                     cvzone.cornerRect(self.frame, (x1, y1, w, h))
 
@@ -137,7 +155,6 @@ class ShotDetector:
             if self.ball_detected_in_frame and previous_center!=None:
                 traveled_cm = self.calculate_distance(new_center[0], new_center[1], previous_center[0], previous_center[1])*self.scale
                 self.ball_velocity = (traveled_cm / (1/CAMERA_FRAME_RATE) ) * 0.036 #convert to km/h
-                self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity])
                 self.BallSpeed.append(self.ball_velocity)
                 display_ball_velocity(self.frame, self.ball_velocity)
 
@@ -145,6 +162,8 @@ class ShotDetector:
                 self.frame_count_ball_undetected+=1
                 #if we dont see the ball for 5 frames, it means goal
                 if self.frame_count_ball_undetected>=5 and len(self.last_ball_state)>1:
+                    if self.direction != None:
+                        self.BallPosition.append([self.last_seen_ball_x, self.last_seen_ball_y, self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
                     goal(self.frame)
 
             
