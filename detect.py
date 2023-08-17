@@ -118,11 +118,11 @@ class ShotDetector:
                         self.last_seen_ball_y = new_center[1]
                         if new_center[0] < self.table_border_left_x-100: 
                             if self.direction != None:
-                                self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
+                                self.BallPosition.append([new_center[0]-self.table_border_left_x, new_center[1]-y1, self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
                             goal(self.frame)
                         elif new_center[0] > self.table_border_right_x+100:
                             if self.direction != None:
-                                self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
+                                self.BallPosition.append([new_center[0]-self.table_border_left_x, new_center[1]-y1, self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
                             goal(self.frame)
                         
                             
@@ -144,7 +144,7 @@ class ShotDetector:
                                 self.last_ball_state.append(self.direction)
                             else:
                                 self.last_ball_state=[]
-                            self.BallPosition.append([new_center[0], new_center[1], self.ball_velocity, self.direction.value, state.value, ])
+                            self.BallPosition.append([new_center[0]-self.table_border_left_x, new_center[1]-y1, self.ball_velocity, self.direction.value, state.value, int(self.frame_count/self.total_frames*self.Duration)])
                 
                     cvzone.cornerRect(self.frame, (x1, y1, w, h))
 
@@ -163,7 +163,7 @@ class ShotDetector:
                 #if we dont see the ball for 5 frames, it means goal
                 if self.frame_count_ball_undetected>=5 and len(self.last_ball_state)>1:
                     if self.direction != None:
-                        self.BallPosition.append([self.last_seen_ball_x, self.last_seen_ball_y, self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
+                        self.BallPosition.append([self.last_seen_ball_x-self.table_border_left_x, self.last_seen_ball_y-y1, self.ball_velocity, self.direction.value, BallState.GOAL.value, int(self.frame_count/self.total_frames*self.Duration)])
                     goal(self.frame)
 
             
